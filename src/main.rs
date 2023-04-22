@@ -1,25 +1,24 @@
-use std::env;
 use dotenv::dotenv;
 use serenity::model::gateway::Ready;
-
+use std::env;
 
 use serenity::async_trait;
-use serenity::prelude::*;
-use serenity::model::channel::Message;
 use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{StandardFramework, CommandResult};
+use serenity::framework::standard::{CommandResult, StandardFramework};
+use serenity::model::channel::Message;
+use serenity::prelude::*;
 
 #[group]
-#[commands(bean)]
+#[commands(bean, user_id)]
 struct General;
 
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-   async fn ready(&self, _: Context, ready: Ready) {
-       println!("{} is connected!", ready.user.name);
-   }
+    async fn ready(&self, _: Context, ready: Ready) {
+        println!("{} is connected!", ready.user.name);
+    }
 }
 
 #[tokio::main]
@@ -48,6 +47,13 @@ async fn main() {
 #[command]
 async fn bean(ctx: &Context, msg: &Message) -> CommandResult {
     msg.reply(ctx, "FAT!").await?;
+
+    Ok(())
+}
+#[command]
+async fn user_id(ctx: &Context, msg: &Message) -> CommandResult {
+    let user_id = msg.author.id;
+    msg.reply(ctx, format!("User id: {}", user_id)).await?;
 
     Ok(())
 }
