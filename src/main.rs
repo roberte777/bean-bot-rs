@@ -1,7 +1,6 @@
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use serenity::model::gateway::Ready;
-use serenity::model::prelude::{Emoji, EmojiId};
 use std::env;
 
 use serenity::async_trait;
@@ -354,6 +353,5 @@ async fn register(ctx: &Context, msg: &Message) -> CommandResult {
         );
         msg.reply(ctx, "Failed to register user!").await?;
     }
-
     Ok(())
 }
