@@ -158,90 +158,103 @@ impl EventHandler for Handler {
                     }
                 }
             }
-        }
-        //if reaction is green checkmark, handle
-        if add_reaction.emoji.as_data().as_str() == "✅" {
-            // check if the message is a wager message
-            // it is a wager message if a line has the string: "Your wager id is:"
-            let message = add_reaction.message(&ctx).await.unwrap();
-            let mut wager_id = 0;
-            for line in message.content.lines() {
-                if line.contains("Your wager id is:") {
-                    wager_id = line.split(":").last().unwrap().trim().parse().unwrap();
+            //if reaction is green checkmark, handle
+            if add_reaction.emoji.as_data().as_str() == "✅" {
+                // check if the message is a wager message
+                // it is a wager message if a line has the string: "Your wager id is:"
+                let message = add_reaction.message(&ctx).await.unwrap();
+                let mut wager_id = 0;
+                for line in message.content.lines() {
+                    if line.contains("Your wager id is:") {
+                        wager_id = line.split(":").last().unwrap().trim().parse().unwrap();
+                    }
                 }
-            }
-            if wager_id == 0 {
-                return;
-            }
+                if wager_id == 0 {
+                    return;
+                }
 
-            //get the discord id's of the winners (the people who reacted with a thumbs up)
-            //remove bot from list of winning and losing users
-            let mut winning_users = message
-                .reaction_users(&ctx, "👍".chars().last().unwrap(), None, None)
-                .await
-                .unwrap();
-            winning_users.retain(|user| !user.bot);
+                //get the discord id's of the winners (the people who reacted with a thumbs up)
+                //remove bot from list of winning and losing users
+                let mut winning_users = message
+                    .reaction_users(&ctx, "👍".chars().last().unwrap(), None, None)
+                    .await
+                    .unwrap();
+                winning_users.retain(|user| !user.bot);
 
-            let winning_user_ids = winning_users
-                .iter()
-                .map(|user| u64::from(user.id))
-                .collect();
+                let winning_user_ids = winning_users
+                    .iter()
+                    .map(|user| u64::from(user.id))
+                    .collect();
 
-            let mut losing_users = message
-                .reaction_users(&ctx, "👎".chars().last().unwrap(), None, None)
-                .await
-                .unwrap();
-            losing_users.retain(|user| !user.bot);
-            let losing_user_ids = losing_users.iter().map(|user| u64::from(user.id)).collect();
+                let mut losing_users = message
+                    .reaction_users(&ctx, "👎".chars().last().unwrap(), None, None)
+                    .await
+                    .unwrap();
+                losing_users.retain(|user| !user.bot);
+                let losing_user_ids = losing_users.iter().map(|user| u64::from(user.id)).collect();
 
-            url.push_str("/wager");
-            println!("url: {}", url);
-            let client = reqwest::Client::new();
-            let res = client
-                .patch(&url)
-                .json(&CloseWagerSend {
-                    wager_id,
-                    winning_user_discord_ids: winning_user_ids,
-                    losing_user_discord_ids: losing_user_ids,
-                })
-                .send()
-                .await;
+                url.push_str("/wager");
+                println!("url: {}", url);
+                let client = reqwest::Client::new();
+                let res = client
+                    .patch(&url)
+                    .json(&CloseWagerSend {
+                        wager_id,
+                        winning_user_discord_ids: winning_user_ids,
+                        losing_user_discord_ids: losing_user_ids,
+                    })
+                    .send()
+                    .await;
 
-            let winning_string = winning_users
-                .iter()
-                .map(|user| user.name.clone())
-                .collect::<Vec<String>>()
-                .join("\n");
-            let losing_string = losing_users
-                .iter()
-                .map(|user| user.name.clone())
-                .collect::<Vec<String>>()
-                .join("\n");
+                let winning_string = winning_users
+                    .iter()
+                    .map(|user| user.name.clone())
+                    .collect::<Vec<String>>()
+                    .join("\n");
+                let losing_string = losing_users
+                    .iter()
+                    .map(|user| user.name.clone())
+                    .collect::<Vec<String>>()
+                    .join("\n");
 
-            match res {
-                Ok(res) => {
-                    if res.status().is_success() {
-                        add_reaction
-                            .message(&ctx)
-                            .await
-                            .unwrap()
-                            .reply(
-                                &ctx,
-                                format!(
-                                    "Successfully closed wager {}\nWinners:\n{}\nLosers:\n{}",
-                                    wager_id, winning_string, losing_string
-                                ),
-                            )
-                            .await
-                            .expect("expected to be able to reply to message");
-                    } else {
-                        //respond to message saying it failed to close, take off the green
-                        //checkmark
-                        println!(
-                            "Failed to close wager! Status: {}\nText: {}",
-                            res.status(),
-                            res.text().await.unwrap()
-                        );
+                match res {
+                    Ok(res) => {
+                        if res.status().is_success() {
+                            add_reaction
+                                .message(&ctx)
+                                .await
+                                .unwrap()
+                                .reply(
+                                    &ctx,
+                                    format!(
+                                        "Successfully closed wager {}\nWinners:\n{}\nLosers:\n{}",
+                                        wager_id, winning_string, losing_string
+                                    ),
+                                )
+                                .await
+                                .expect("expected to be able to reply to message");
+                        } else {
+                            //respond to message saying it failed to close, take off the green
+                            //checkmark
+                            println!(
+                                "Failed to close wager! Status: {}\nText: {}",
+                                res.status(),
+                                res.text().await.unwrap()
+                            );
+                            add_reaction
+                                .delete(&ctx)
+                                .await
+                                .expect("expected to be able to remove the reaction");
+                            add_reaction
+                                .message(&ctx)
+                                .await
+                                .unwrap()
+                                .reply(&ctx, "Failed to close wager!")
+                                .await
+                                .expect("expected to be able to reply to message");
+                        }
+                    }
+                    Err(_) => {
                         add_reaction
                             .delete(&ctx)
                             .await
@@ -250,23 +263,10 @@ impl EventHandler for Handler {
                             .message(&ctx)
                             .await
                             .unwrap()
-                            .reply(&ctx, "Failed to close wager!")
+                            .reply(&ctx, "Failed to close wager! API could be offline")
                             .await
                             .expect("expected to be able to reply to message");
                     }
-                }
-                Err(_) => {
-                    add_reaction
-                        .delete(&ctx)
-                        .await
-                        .expect("expected to be able to remove the reaction");
-                    add_reaction
-                        .message(&ctx)
-                        .await
-                        .unwrap()
-                        .reply(&ctx, "Failed to close wager! API could be offline")
-                        .await
-                        .expect("expected to be able to reply to message");
                 }
             }
         }
