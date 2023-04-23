@@ -1,6 +1,9 @@
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use serenity::model::gateway::Ready;
+use serenity::model::prelude::component::ButtonStyle;
+use serenity::model::prelude::Emoji;
+use serenity::utils::MessageBuilder;
 use std::env;
 
 use serenity::async_trait;
@@ -80,14 +83,14 @@ impl EventHandler for Handler {
                             println!("Successfully removed wager!");
                         } else {
                             println!(
-                                "Failed to remove wager! Status: {}\nText: {}",
+                                "Failed to remove user from wager! Status: {}\nText: {}",
                                 res.status(),
                                 res.text().await.unwrap()
                             );
                         }
                     }
                     Err(e) => {
-                        println!("Failed to remove wager! Error: {}", e);
+                        println!("Failed to remove user from wager! Error: {}", e);
                     }
                 }
             }
@@ -321,11 +324,41 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             let res = client.post(&url).json(&WagerSend { amount }).send().await?;
             if res.status().is_success() {
                 let wager: WagerReceive = res.json().await?;
-                msg.reply(
-                    ctx,
-                    format!("Wager successful! \nYour wager id is: {}\nWager amount: {}\nWager Status: Open", wager.id, wager.amount),
-                )
-                .await?;
+                //create a message with icons at the bottom
+                //the icons will be a thumbs up and a thumbs down, a heart, and a green checkmark
+                msg
+                    .channel_id
+                    .send_message(&ctx, |m| {
+                        m.reference_message(msg);
+                        m.content(
+                    format!("Wager successful! \nYour wager id is: {}\nWager amount: {}\nWager Status: Open", wager.id, wager.amount))
+                            .components(|c| {
+                                c.create_action_row(|a| {
+                                    a.create_button(|b| {
+                                        b.label("👍");
+                                        b.style(ButtonStyle::Success);
+                                        b.custom_id("win");
+                                        b
+                                    });
+                                    a.create_button(|b| {
+                                        b.label("👎");
+                                        b.style(ButtonStyle::Danger);
+                                        b.custom_id("lose");
+                                        b
+                                    });
+                                    a.create_button(|b| {
+                                        b.label("✅");
+                                        b.style(ButtonStyle::Primary);
+                                        b.custom_id("close");
+                                        b
+                                    });
+                                    a
+                                });
+                                c
+                            })
+                    })
+                    .await
+                    .expect("expected to be able to send message");
             } else {
                 println!(
                     "Failed to create wager! Status: {}\nText: {}",
