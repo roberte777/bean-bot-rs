@@ -2,7 +2,7 @@ use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use serenity::model::gateway::Ready;
 use serenity::model::prelude::component::ButtonStyle;
-use serenity::model::prelude::Emoji;
+use serenity::model::prelude::{Emoji, ReactionType};
 use serenity::utils::MessageBuilder;
 use std::env;
 
@@ -334,16 +334,16 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                     })
                     .await
                     .expect("expected to be able to send message");
-                m.react(&ctx, "❤️".chars().last().unwrap())
+                m.react(&ctx, ReactionType::Unicode("❤️".to_string()))
                     .await
                     .expect("expected to be able to react to message");
-                m.react(&ctx, "👍".chars().last().unwrap())
+                m.react(&ctx, '👍')
                     .await
                     .expect("expected to be able to react to message");
-                m.react(&ctx, "👎".chars().last().unwrap())
+                m.react(&ctx, '👎')
                     .await
                     .expect("expected to be able to react to message");
-                m.react(&ctx, "✅".chars().last().unwrap())
+                m.react(&ctx, '✅')
                     .await
                     .expect("expected to be able to react to message");
             } else {
