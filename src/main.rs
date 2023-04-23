@@ -28,10 +28,70 @@ struct CloseWagerSend {
     losing_user_discord_ids: Vec<u64>,
 }
 
+#[derive(Serialize)]
+struct RemoveUserWagerSend {
+    wager_id: i32,
+    discord_id: u64,
+}
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
+    }
+    async fn reaction_remove(
+        &self,
+        ctx: Context,
+        add_reaction: serenity::model::channel::Reaction,
+    ) {
+        if add_reaction
+            .message(&ctx)
+            .await
+            .expect("excpeted to be able to find the message")
+            .author
+            .bot
+        {
+            if add_reaction.emoji.as_data().as_str() == "❤️" {
+                let message = add_reaction.message(&ctx).await.unwrap();
+                let mut wager_id = 0;
+                for line in message.content.lines() {
+                    if line.contains("Your wager id is:") {
+                        wager_id = line.split(":").last().unwrap().trim().parse().unwrap();
+                    }
+                }
+                if wager_id == 0 {
+                    return;
+                }
+                let discord_id = u64::from(add_reaction.user_id.unwrap());
+                // send the delete request
+                let mut url = env::var("BEAN_BUCKS_URL").expect("URL");
+                url.push_str("/user/wager");
+                let client = reqwest::Client::new();
+                let res = client
+                    .delete(&url)
+                    .json(&RemoveUserWagerSend {
+                        wager_id,
+                        discord_id,
+                    })
+                    .send()
+                    .await;
+                match res {
+                    Ok(res) => {
+                        if res.status().is_success() {
+                            println!("Successfully removed wager!");
+                        } else {
+                            println!(
+                                "Failed to remove wager! Status: {}\nText: {}",
+                                res.status(),
+                                res.text().await.unwrap()
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        println!("Failed to remove wager! Error: {}", e);
+                    }
+                }
+            }
+        }
     }
     // handle reactions
     async fn reaction_add(&self, ctx: Context, add_reaction: serenity::model::channel::Reaction) {
@@ -45,10 +105,8 @@ impl EventHandler for Handler {
             .author
             .bot
         {
-            // if message is a thumbs up, handle or thumbs down
-            if add_reaction.emoji.as_data().as_str() == "👍"
-                || add_reaction.emoji.as_data().as_str() == "👎"
-            {
+            // if message is a heart
+            if add_reaction.emoji.as_data().as_str() == "❤️" {
                 // check if the message is a wager message
                 // it is a wager message if a line has the string: "Your wager id is:"
                 let message = add_reaction.message(&ctx).await.unwrap();
