@@ -1,9 +1,7 @@
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
 use serenity::model::gateway::Ready;
-use serenity::model::prelude::component::ButtonStyle;
-use serenity::model::prelude::{Emoji, ReactionType};
-use serenity::utils::MessageBuilder;
+use serenity::model::prelude::ReactionType;
 use std::env;
 
 use serenity::async_trait;
@@ -194,7 +192,6 @@ impl EventHandler for Handler {
                 let losing_user_ids = losing_users.iter().map(|user| u64::from(user.id)).collect();
 
                 url.push_str("/wager");
-                println!("url: {}", url);
                 let client = reqwest::Client::new();
                 let res = client
                     .patch(&url)
