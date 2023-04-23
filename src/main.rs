@@ -331,21 +331,28 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                         m.content(
                     format!("Wager successful! \nYour wager id is: {}\nWager amount: {}\nWager Status: Open", wager.id, wager.amount)
                         )
+                            .reactions([
+                                ReactionType::Unicode("❤️".to_string()),
+                                ReactionType::Unicode("👍".to_string()),
+                                ReactionType::Unicode("👎".to_string()),
+                                ReactionType::Unicode("✅".to_string()),
+                            ])
                     })
+
                     .await
                     .expect("expected to be able to send message");
-                m.react(&ctx, ReactionType::Unicode("❤️".to_string()))
-                    .await
-                    .expect("expected to be able to react to message");
-                m.react(&ctx, '👍')
-                    .await
-                    .expect("expected to be able to react to message");
-                m.react(&ctx, '👎')
-                    .await
-                    .expect("expected to be able to react to message");
-                m.react(&ctx, '✅')
-                    .await
-                    .expect("expected to be able to react to message");
+                // m.react(&ctx, ReactionType::Unicode("❤️".to_string()))
+                //     .await
+                //     .expect("expected to be able to react to message");
+                // m.react(&ctx, '👍')
+                //     .await
+                //     .expect("expected to be able to react to message");
+                // m.react(&ctx, '👎')
+                //     .await
+                //     .expect("expected to be able to react to message");
+                // m.react(&ctx, '✅')
+                //     .await
+                //     .expect("expected to be able to react to message");
             } else {
                 println!(
                     "Failed to create wager! Status: {}\nText: {}",
