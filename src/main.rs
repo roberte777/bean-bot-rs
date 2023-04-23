@@ -107,6 +107,7 @@ impl EventHandler for Handler {
             .expect("excpeted to be able to find the message")
             .author
             .bot
+            && !add_reaction.user(&ctx).await.unwrap().bot
         {
             // if message is a heart
             if add_reaction.emoji.as_data().as_str() == "❤️" {
@@ -174,19 +175,23 @@ impl EventHandler for Handler {
             }
 
             //get the discord id's of the winners (the people who reacted with a thumbs up)
-            let winning_users = message
+            //remove bot from list of winning and losing users
+            let mut winning_users = message
                 .reaction_users(&ctx, "👍".chars().last().unwrap(), None, None)
                 .await
                 .unwrap();
+            winning_users.retain(|user| !user.bot);
+
             let winning_user_ids = winning_users
                 .iter()
                 .map(|user| u64::from(user.id))
                 .collect();
 
-            let losing_users = message
+            let mut losing_users = message
                 .reaction_users(&ctx, "👎".chars().last().unwrap(), None, None)
                 .await
                 .unwrap();
+            losing_users.retain(|user| !user.bot);
             let losing_user_ids = losing_users.iter().map(|user| u64::from(user.id)).collect();
 
             url.push_str("/wager");
@@ -202,12 +207,6 @@ impl EventHandler for Handler {
                 .send()
                 .await;
 
-            //produce a string of the winners and losers, formatted like this:
-            //Winners:
-            //<user_name>
-            //Losers:
-            //<user_name>
-            //
             let winning_string = winning_users
                 .iter()
                 .map(|user| user.name.clone())
@@ -324,7 +323,7 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             let res = client.post(&url).json(&WagerSend { amount }).send().await?;
             if res.status().is_success() {
                 let wager: WagerReceive = res.json().await?;
-                let m = msg
+                msg
                     .channel_id
                     .send_message(&ctx, |m| {
                         m.reference_message(msg);
@@ -341,18 +340,6 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
                     .await
                     .expect("expected to be able to send message");
-                // m.react(&ctx, ReactionType::Unicode("❤️".to_string()))
-                //     .await
-                //     .expect("expected to be able to react to message");
-                // m.react(&ctx, '👍')
-                //     .await
-                //     .expect("expected to be able to react to message");
-                // m.react(&ctx, '👎')
-                //     .await
-                //     .expect("expected to be able to react to message");
-                // m.react(&ctx, '✅')
-                //     .await
-                //     .expect("expected to be able to react to message");
             } else {
                 println!(
                     "Failed to create wager! Status: {}\nText: {}",
