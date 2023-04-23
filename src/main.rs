@@ -324,17 +324,28 @@ async fn wager(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
             let res = client.post(&url).json(&WagerSend { amount }).send().await?;
             if res.status().is_success() {
                 let wager: WagerReceive = res.json().await?;
-                msg
+                let m = msg
                     .channel_id
                     .send_message(&ctx, |m| {
                         m.reference_message(msg);
                         m.content(
                     format!("Wager successful! \nYour wager id is: {}\nWager amount: {}\nWager Status: Open", wager.id, wager.amount)
                         )
-                        .reactions(["❤️".chars().last().unwrap(),"👍".chars().last().unwrap(), "👎".chars().last().unwrap(),"✅".chars().last().unwrap()])
                     })
                     .await
                     .expect("expected to be able to send message");
+                m.react(&ctx, "❤️".chars().last().unwrap())
+                    .await
+                    .expect("expected to be able to react to message");
+                m.react(&ctx, "👍".chars().last().unwrap())
+                    .await
+                    .expect("expected to be able to react to message");
+                m.react(&ctx, "👎".chars().last().unwrap())
+                    .await
+                    .expect("expected to be able to react to message");
+                m.react(&ctx, "✅".chars().last().unwrap())
+                    .await
+                    .expect("expected to be able to react to message");
             } else {
                 println!(
                     "Failed to create wager! Status: {}\nText: {}",
